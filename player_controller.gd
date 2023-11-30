@@ -9,6 +9,7 @@ var jump_started = true
 var jump_input_held
 var jump_input_just_pressed
 var move_input_axis
+var descend_input_held
 var velocity_direction
 var jumping = false
 var jump_stop = false
@@ -81,6 +82,7 @@ func _physics_process(delta: float) -> void:
 	move_input_axis = Input.get_axis("ui_left", "ui_right")
 	jump_input_held = Input.is_action_pressed("game_jump")
 	jump_input_just_pressed = Input.is_action_just_pressed("game_jump")
+	descend_input_held = Input.is_action_pressed("ui_down")
 	velocity_direction = get_numbers_sign(velocity.x)
 	if velocity_direction == 0:
 		velocity_direction = move_input_axis
@@ -148,10 +150,21 @@ func apply_movement(delta):
 		velocity.x -= (velocity.x - MAX_X_VELOCITY) * DEACCEL_SPEED
 
 # Graviting
+var NEW_MAX_Y_VELOCITY
+var gravity_multiplier
+
 func apply_gravity(delta):
-	if velocity.y < MAX_Y_VELOCITY + DEVIATION:
-		velocity.y += gravity * delta
-		if velocity.y > MAX_Y_VELOCITY:
-			velocity.y = MAX_Y_VELOCITY
+	
+	if velocity.y > 0 and descend_input_held:
+		NEW_MAX_Y_VELOCITY = DESCEND_MULTIPLIER * MAX_Y_VELOCITY
+		gravity_multiplier = DESCEND_MULTIPLIER
 	else:
-		velocity.y -= (velocity.y - MAX_Y_VELOCITY) * AIR_FRICTION
+		NEW_MAX_Y_VELOCITY = MAX_Y_VELOCITY
+		gravity_multiplier = 1
+	
+	if velocity.y < NEW_MAX_Y_VELOCITY + DEVIATION:
+		velocity.y += gravity * gravity_multiplier * delta
+		if velocity.y > NEW_MAX_Y_VELOCITY:
+			velocity.y = NEW_MAX_Y_VELOCITY
+	else:
+		velocity.y -= (velocity.y - NEW_MAX_Y_VELOCITY) * AIR_FRICTION

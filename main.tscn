@@ -4,9 +4,49 @@
 [ext_resource type="PackedScene" uid="uid://bxndoggdtdpcj" path="res://player.tscn" id="2_b3gx7"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_lblmw"]
-size = Vector2(960, 122)
+size = Vector2(958, 128)
 
 [node name="Node2D" type="Node2D"]
+
+[node name="Icon" type="Sprite2D" parent="."]
+position = Vector2(-147, 10)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon/Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon/Icon/Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon/Icon/Icon/Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon/Icon/Icon/Icon/Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon/Icon/Icon/Icon/Icon/Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon/Icon/Icon/Icon/Icon/Icon/Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon/Icon/Icon/Icon/Icon/Icon/Icon/Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
+
+[node name="Icon" type="Sprite2D" parent="Icon/Icon/Icon/Icon/Icon/Icon/Icon/Icon/Icon"]
+position = Vector2(0, -500)
+texture = ExtResource("1_xxh38")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="."]
 position = Vector2(35, 294)
@@ -19,4 +59,4 @@ scale = Vector2(7.51563, 1)
 texture = ExtResource("1_xxh38")
 
 [node name="CharacterBody2D" parent="." instance=ExtResource("2_b3gx7")]
-scale = Vector2(1, 1)
+position = Vector2(0, -4865)
