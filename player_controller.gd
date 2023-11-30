@@ -2,17 +2,6 @@ extends CharacterBody2D
 
 var physics_delta = ProjectSettings.get_setting("physics/common/physics_ticks_per_second")
 var gravity: int = ProjectSettings.get_setting("physics/2d/default_gravity")
-var air_time = 0
-var jump_time = 0
-var jump_deaccel_time = 0
-var jump_started = true
-var jump_input_held
-var jump_input_just_pressed
-var move_input_axis
-var descend_input_held
-var velocity_direction
-var jumping = false
-var jump_stop = false
 
 @export_category("Controller settings")
 # Platformer has jump; top-down can move in all 4 directions
@@ -32,6 +21,8 @@ var jump_stop = false
 @export var SURFACE_FRICTION = 1.0
 @export var RUN_MULTIPLIER = 1.0
 @export var CROUCH_MULTIPLIER = 1.0
+@export var AIR_MANEUVERABILITY = 1.0
+@export var FALL_PRECISION = false
 
 
 @export_group("Movement/Vertical")
@@ -47,7 +38,6 @@ var jump_stop = false
 @export var DELAYED_INPUT_DETECTION_TIME = 0.1
 
 @export var DESCEND_MULTIPLIER = 1.0
-@export var AIR_MANEUVERABILITY = 1.0
 
 
 @export_group("Work in progress")
@@ -59,8 +49,7 @@ var jump_stop = false
 # Wall jump
 # Gravity rotation
 # N jumps
-# Run / Crouch / Fast fall
-# Dash?
+# Gameplay Mode
 
 # Tool functions
 func get_numbers_sign(num: float):
@@ -78,24 +67,34 @@ func one_devided(num):
 		return 1 / num
 
 # Main
+var jump_input_held
+var jump_input_just_pressed
+var move_input_axis
+var descend_input_held
+
+
 func _physics_process(delta: float) -> void:
 	move_input_axis = Input.get_axis("ui_left", "ui_right")
 	jump_input_held = Input.is_action_pressed("game_jump")
 	jump_input_just_pressed = Input.is_action_just_pressed("game_jump")
 	descend_input_held = Input.is_action_pressed("ui_down")
-	velocity_direction = get_numbers_sign(velocity.x)
-	if velocity_direction == 0:
-		velocity_direction = move_input_axis
+
 	
 	apply_gravity(delta)
+	apply_jump(delta) # switched with movement
 	apply_movement(delta)
-	apply_jump(delta)
+	
 	move_and_slide()
 
 # Jumping
+var air_time = 0
+var jump_time = 0
+var jump_deaccel_time = 0
+var jump_started = true
+var jumping = false
+var jump_stop = false
+
 func apply_jump(delta):
-#	print(jump_started, " ", snapped(air_time, 0.1), " ", snapped(jump_time, 0.1))
-	
 	if jump_input_just_pressed:
 		jump_time = 0
 	if is_on_floor():
@@ -135,27 +134,41 @@ func apply_jump(delta):
 	jump_deaccel_time += delta
 
 # Moving
+var velocity_direction
+var move_mult
+
 func apply_movement(delta):
-	# Make surface AIR_FRICTION parameter
+	print(velocity.x)
+	velocity_direction = get_numbers_sign(velocity.x)
+	if velocity_direction == 0:
+		velocity_direction = move_input_axis
+	if is_on_floor():
+		move_mult = 1
+	elif multiplied_descend and FALL_PRECISION:
+		move_mult = AIR_MANEUVERABILITY * DESCEND_MULTIPLIER
+	else:
+		move_mult = AIR_MANEUVERABILITY
+		
 	if abs(velocity.x) < MAX_X_VELOCITY + DEVIATION:
-		velocity.x += move_input_axis * ACCEL_SPEED * delta / SURFACE_FRICTION
+		velocity.x += move_input_axis * ACCEL_SPEED * move_mult * delta / SURFACE_FRICTION
 		if abs(velocity.x) > MAX_X_VELOCITY:
-			velocity.x = MAX_X_VELOCITY * velocity_direction
+			velocity.x = MAX_X_VELOCITY * get_numbers_sign(velocity.x)
 		if move_input_axis == 0:
-			if abs(velocity.x) < delta * DEACCEL_SPEED * SURFACE_FRICTION + DEVIATION:
+			if abs(velocity.x) < delta * DEACCEL_SPEED * move_mult * SURFACE_FRICTION + DEVIATION:
 				velocity.x = 0
 			else:
-				velocity.x -= velocity_direction * DEACCEL_SPEED * SURFACE_FRICTION * delta
+				velocity.x -= velocity_direction * DEACCEL_SPEED * move_mult * SURFACE_FRICTION * delta
 	else:
-		velocity.x -= (velocity.x - MAX_X_VELOCITY) * DEACCEL_SPEED
+		velocity.x -= velocity_direction * DEACCEL_SPEED * move_mult * SURFACE_FRICTION * delta
 
 # Graviting
 var NEW_MAX_Y_VELOCITY
 var gravity_multiplier
+var multiplied_descend
 
 func apply_gravity(delta):
-	
-	if velocity.y > 0 and descend_input_held:
+	multiplied_descend = velocity.y >= MAX_Y_VELOCITY and descend_input_held
+	if multiplied_descend:
 		NEW_MAX_Y_VELOCITY = DESCEND_MULTIPLIER * MAX_Y_VELOCITY
 		gravity_multiplier = DESCEND_MULTIPLIER
 	else:
