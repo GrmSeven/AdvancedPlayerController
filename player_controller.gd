@@ -4,44 +4,42 @@ var physics_delta = ProjectSettings.get_setting("physics/common/physics_ticks_pe
 var gravity: int = ProjectSettings.get_setting("physics/2d/default_gravity")
 
 @export_category("Controller settings")
-# Platformer has jump; top-down can move in all 4 directions
-@export_enum("Platformer", "Top-Down") var GAMEPLAY_MODE := 0
 # Small shift for values to slip into static position
 @export var DEVIATION = 0.1 ** 2
 
+@export_group("wip")
+@export var ROTATE_WITH_GRAVITY	:= false
+
 # 
 @export_group("Movement/Horisontal")
-@export var MAX_X_VELOCITY = 500
+@export var MAX_X_VELOCITY = 400
 @export_range(0, 100, 0.1) var ACCEL_SPEED: float = physics_delta * MAX_X_VELOCITY:
 	set(V):
 		ACCEL_SPEED = -log(1-V/101) * physics_delta * MAX_X_VELOCITY
 @export_range(0, 100, 0.1) var DEACCEL_SPEED: float = physics_delta * MAX_X_VELOCITY:
 	set(V):
 		DEACCEL_SPEED = -log(1-V/101) * physics_delta * MAX_X_VELOCITY
-@export var SURFACE_FRICTION = 1.0
-@export var RUN_MULTIPLIER = 1.0
-@export var CROUCH_MULTIPLIER = 1.0
-@export var AIR_MANEUVERABILITY = 1.0
-@export var FALL_PRECISION = false
+#@export var SURFACE_FRICTION = 1.0
+#@export var RUN_MULTIPLIER = 1.0
+#@export var CROUCH_MULTIPLIER = 1.0
+@export var AIR_MANEUVERABILITY = 0.8
+@export var FALL_PRECISION = true
 
 
 @export_group("Movement/Vertical")
-@export var MAX_Y_VELOCITY = 1000
-@export var AIR_FRICTION = 0.05
+@export var MAX_Y_VELOCITY = 500
+@export var AIR_FRICTION = 0.1
 
 @export var HOLDABLE_JUMP = false
-@export var MAX_JUMP_TIME = 0.2
-@export var MIN_JUMP_TIME = 0.2
-@export var JUMP_VELOCITY = 500
-@export_range(0, 1, 0.01) var JUMP_DEACCEL = 0.9
-@export var COYOTE_TIME = 1
-@export var DELAYED_INPUT_DETECTION_TIME = 0.1
-
-@export var DESCEND_MULTIPLIER = 1.0
-
-
-@export_group("Work in progress")
-@export var ROTATE_WITH_GRAVITY	:= false
+@export var MAX_JUMP_TIME = 0.3
+@export var MIN_JUMP_TIME = 0.0
+@export var JUMP_VELOCITY = 400
+@export_range(0, 1, 0.01) var JUMP_DEACCEL = 0.8
+@export var JUMP_DEACCEL_TIME = 0.1
+@export var COYOTE_TIME = 0.1
+@export var DELAYED_JUMP_TIME = 0.1
+@export var N_JUMPS = 1
+@export var DESCEND_MULTIPLIER = 2.0
 
 ### TODO:
 # Make only relevant show up
@@ -49,10 +47,9 @@ var gravity: int = ProjectSettings.get_setting("physics/2d/default_gravity")
 # Wall jump
 # Gravity rotation
 # N jumps
-# Gameplay Mode
 
 # Tool functions
-func get_numbers_sign(num: float):
+func get_numbers_sign(num: float) -> int:
 	if num == 0:
 		return 0
 	elif num > 0:
@@ -60,7 +57,7 @@ func get_numbers_sign(num: float):
 	else:
 		return -1
 	
-func one_devided(num):
+func one_devided(num) -> float:
 	if num == 0:
 		return 0
 	else:
@@ -81,24 +78,24 @@ func _physics_process(delta: float) -> void:
 
 	
 	apply_gravity(delta)
-	apply_jump(delta) # switched with movement
+	apply_jump(delta)
 	apply_movement(delta)
 	
 	move_and_slide()
 
 # Jumping
-var air_time = 0
-var jump_time = 0
-var jump_deaccel_time = 0
+var air_timer = 0
+var jump_timer = 0
+var jump_deaccel_timer = 0
 var jump_started = true
 var jumping = false
 var jump_stop = false
 
-func apply_jump(delta):
+func apply_jump(delta) -> void:
 	if jump_input_just_pressed:
-		jump_time = 0
+		jump_timer = 0
 	if is_on_floor():
-		air_time = 0
+		air_timer = 0
 		if jump_started:
 			jump_started = false
 		if jumping:
@@ -107,21 +104,21 @@ func apply_jump(delta):
 		if HOLDABLE_JUMP and jump_input_held:
 			jumping = true
 		# If player triggered jump in advance
-		elif jump_time <= DELAYED_INPUT_DETECTION_TIME:
+		elif jump_timer <= DELAYED_JUMP_TIME:
 			jumping = true
 	# Coyote time jump
-	if air_time <= COYOTE_TIME and !jump_started and jump_input_just_pressed:
-		air_time = 0
+	if air_timer <= COYOTE_TIME and !jump_started and jump_input_just_pressed:
+		air_timer = 0
 		jumping = true
 	
 	if jumping:
-		if !jump_stop and (jump_input_held and air_time < MAX_JUMP_TIME or air_time < MIN_JUMP_TIME):
+		if !jump_stop and (jump_input_held and air_timer < MAX_JUMP_TIME or air_timer < MIN_JUMP_TIME):
 			velocity.y = -JUMP_VELOCITY
-			jump_deaccel_time = 0
+			jump_deaccel_timer = 0
 		else:
 			jump_stop = true
 		if jump_stop:
-			if jump_deaccel_time <= 0.1:
+			if jump_deaccel_timer <= JUMP_DEACCEL_TIME:
 				velocity.y *= JUMP_DEACCEL
 			else:
 				jumping = false
@@ -129,16 +126,15 @@ func apply_jump(delta):
 		
 		jump_started = true
 	
-	air_time += delta
-	jump_time += delta
-	jump_deaccel_time += delta
+	air_timer += delta
+	jump_timer += delta
+	jump_deaccel_timer += delta
 
 # Moving
 var velocity_direction
 var move_mult
 
-func apply_movement(delta):
-	print(velocity.x)
+func apply_movement(delta) -> void:
 	velocity_direction = get_numbers_sign(velocity.x)
 	if velocity_direction == 0:
 		velocity_direction = move_input_axis
@@ -150,23 +146,23 @@ func apply_movement(delta):
 		move_mult = AIR_MANEUVERABILITY
 		
 	if abs(velocity.x) < MAX_X_VELOCITY + DEVIATION:
-		velocity.x += move_input_axis * ACCEL_SPEED * move_mult * delta / SURFACE_FRICTION
+		velocity.x += move_input_axis * ACCEL_SPEED * move_mult * delta
 		if abs(velocity.x) > MAX_X_VELOCITY:
 			velocity.x = MAX_X_VELOCITY * get_numbers_sign(velocity.x)
 		if move_input_axis == 0:
-			if abs(velocity.x) < delta * DEACCEL_SPEED * move_mult * SURFACE_FRICTION + DEVIATION:
+			if abs(velocity.x) < delta * DEACCEL_SPEED * move_mult + DEVIATION:
 				velocity.x = 0
 			else:
-				velocity.x -= velocity_direction * DEACCEL_SPEED * move_mult * SURFACE_FRICTION * delta
+				velocity.x -= velocity_direction * DEACCEL_SPEED * move_mult * delta
 	else:
-		velocity.x -= velocity_direction * DEACCEL_SPEED * move_mult * SURFACE_FRICTION * delta
+		velocity.x -= velocity_direction * DEACCEL_SPEED * move_mult * delta
 
 # Graviting
 var NEW_MAX_Y_VELOCITY
 var gravity_multiplier
 var multiplied_descend
 
-func apply_gravity(delta):
+func apply_gravity(delta) -> void:
 	multiplied_descend = velocity.y >= MAX_Y_VELOCITY and descend_input_held
 	if multiplied_descend:
 		NEW_MAX_Y_VELOCITY = DESCEND_MULTIPLIER * MAX_Y_VELOCITY
